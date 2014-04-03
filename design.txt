@@ -1,0 +1,128 @@
+*) setup
+- prep raw database access
+	- create "existing schema" layout.
+- prep normalized database access
+	- read translation mapping.
+
+*) field check
+- fetch field list schema
+- compare to existing raw database schema
+- update existing database automatically (if possible)
+- send warning email to see if new fields need to be added to normalizer.
+
+*) deletion check
+- fetch all LN 
+- compare to existing raw database
+- delete any entry in the raw database that isn't listed
+
+*) update data
+- for each LN:
+	- fetch UD for LN
+	- compare to UD in raw database
+	- if more recent
+		- fetch all fields for LN
+		- insert/update raw database
+		- NORMALIZE data - insert/update into normalized database
+		- update images for listing
+
+
+-----------------------
+directory layout:
+
+alt/ 
+	- directory for testing/tools that aren't part of the main tool.
+	- tools in here are in git, but aren't an official part of the system.
+
+initraw.php 
+	- one step raw database SQL generator.
+	http://www.codeproject.com/Articles/76814/Generate-SQL-Database-Schema-from-XML-Part-File
+	- fetch schema from XML server
+	- convert to SQL
+	- create RAW database
+	- create mapping.ini template based on detected classes.
+
+onestep.php 
+	- one step database update
+	- options: 
+			data min/hours/days/single
+			photos min/hours/days/single
+	- instantiates the necessary classes.
+
+ini/
+	- location of all ini files.
+	- initially I thought they might be in php ini format. But we're going to
+	  be dealing with XML data, so why not XML config files, which would allow
+	  a much greater flexibility?
+
+ini/onestep.ini 
+	- initialization file
+	http://ca3.php.net/manual/en/function.parse-ini-file.php
+
+	---- cut here ----
+	[main]
+	; stuff that can change for each feed.
+	[feed]
+	type =
+	user =
+	name =
+	pass =
+	url = 
+	; ...otherstuff...
+	---- cut here ----
+
+ini/mapping.ini 
+	- mapping data for raw to normalized feed.
+	http://ca3.php.net/manual/en/function.parse-ini-file.php
+
+	---- cut here ----
+	[classes] 
+	; expected classes. complain if actual classes differ
+	class[] = class1
+	class[] = class2
+	class[] = class3
+
+	[default] 
+	; first cut imported from map.template.ini
+
+	[CLASS1] 
+	; mapping for CLASS1 that DIFFERS from main map.
+	...
+	[CLASSn]
+	; mapping for CLASSn that DIFFERS from main map.
+	---- cut here ----
+
+ini/map.template.ini
+	- provides the initial "default" section used by initraw to create mappping.ini
+
+
+classes/ 
+	- internally developed classes
+
+classes/database.class.php 
+	- wrapper for database handling. Methods t.b.d. (PHP PDO? Something more generic to allow for easier database swapping?)
+
+classes/feed/handler.class.php 
+	- core "type independent" feed definition class
+		- init($settings_array) - exact values depend on type.
+			$settings_array = array('type' = 'xml', 'user' => 'x', 'pass' => 'y', 'url' => 'z', ...)
+		- open/close
+		- fetchAll($mlsnum) - returns all the data for a single mls number.
+		- fetchFrom($date_in_past) - returns all MLS numbers with update_date >= $date_in_past
+
+classes/feed/soap.class.php 
+	- SOAP/XML feed extends feed and wraps around nusoap lib class.
+
+classes/feed/rets.class.php 
+	- RETS feed (stub) extends feed, wraps around phrets lib class.
+
+classes/listing.class.php
+	- listing as object. Stuff raw data in. Extra normalized data.
+		- Could incorporate info about fields/normalizer mapping, give it the raw data and just extract the normalized data.
+		methods: 
+			listing->setmap($path_to_mapping_ini); 
+			listing->load($rawdata);
+			$normalized = listing->getNormal();
+
+lib/ 
+	- external tools and classes used by internal classes.
+
